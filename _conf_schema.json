@@ -2,20 +2,20 @@
     "group_msg_history": {
         "description": "输入给大模型的消息数量",
         "type": "int",
-        "hint": "决定了会输入给大模型多少条q群历史消息(最多200条)",
-        "default": 20
+        "hint": "决定了会输入给大模型多少条q群历史消息",
+        "default": 100
+    },
+    "image_count":{
+        "description":"输入给大模型的图片数量",
+        "type":"int",
+        "hint":"决定了会输入给大模型多少张图片,仅限支持图片输入的模型(警告:注意tokens消耗)",
+        "default":0
     },
     "enabled_groups": {
         "description": "启用回复功能的群聊列表",
         "type": "list",
         "hint": "只有在这个列表中的群聊才会启用回复功能，如果为空则不启用回复功能",
         "default": []
-    },
-    "enabled_private": {
-        "description": "启用私聊回复功能",
-        "type": "bool",
-        "hint": "是否开启私聊回复功能",
-        "default": false
     },
     "filter_thinking": {
         "description": "过滤思考过程",
@@ -69,36 +69,6 @@
                         "default":0.1
                     }
                 }
-            }
-        }
-    },
-    "image_processing":{
-        "description":"图片处理相关配置",
-        "type":"object",
-        "items":{
-            "image_count":{
-                "description":"直接输入给大模型的图片数量",
-                "type":"int",
-                "hint":"决定了会直接输入给大模型多少张图片,仅限支持图片输入的多模态模型可用(和下面的图像转述功能可以同时开启，最近的指定数量图片会直接输入)",
-                "default":0
-            },
-            "use_image_caption": {
-                "type": "bool",
-                "description": "图像转述(需要模型支持)",
-                "hint": "用模型将聊天中的图片描述为文字，作为上下文输入",
-                "default": false
-            },
-            "image_caption_provider_id": {
-                "type": "string",
-                "description": "图像转述提供商ID",
-                "hint": "可选，图像转述提供商ID，如为空则使用当前选择的提供商",
-                "default": ""
-            },
-            "image_caption_prompt": {
-                "type": "string",
-                "description": "图像转述提示词",
-                "hint": "用于描述图像转述的提示词，根据你的token预算来调整",
-                "default": "请直接简短描述这张图片"
             }
         }
     }
