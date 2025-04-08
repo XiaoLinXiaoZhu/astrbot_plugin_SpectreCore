@@ -81,7 +81,7 @@ class SpectreCore(Star):
         """插件的前缀喵 可以用sc代替喵"""
         pass
 
-    @spectrecore.help("help", alias=['帮助', 'helpme'])
+    @spectrecore.command("help", alias=['帮助', 'helpme'])
     async def help(self, event: AstrMessageEvent):
         """查看插件的帮助喵"""
         yield event.plain_result(
