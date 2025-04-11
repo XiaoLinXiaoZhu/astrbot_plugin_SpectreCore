@@ -14,11 +14,17 @@ class HistoryStorage:
     
     # 保存配置对象的静态变量
     config = None
+    # 基础存储路径
+    base_storage_path = None
     
     @staticmethod
-    def init_config(config: AstrBotConfig):
+    def init(config: AstrBotConfig):
         """初始化配置对象"""
         HistoryStorage.config = config
+        # 初始化基础存储路径
+        HistoryStorage.base_storage_path = os.path.join(os.getcwd(), "data", "chat_history")
+        HistoryStorage._ensure_dir(HistoryStorage.base_storage_path)
+        logger.debug(f"消息存储路径初始化: {HistoryStorage.base_storage_path}")
     
     @staticmethod
     def _ensure_dir(directory: str) -> None:
@@ -29,12 +35,17 @@ class HistoryStorage:
     @staticmethod
     def _get_storage_path(platform_name: str, is_private_chat: bool, chat_id: str) -> str:
         """获取存储路径"""
-        base_dir = "data/chat_history"
+        if not HistoryStorage.base_storage_path:
+            # 确保基础路径已初始化，未初始化则初始化一次
+            HistoryStorage.base_storage_path = os.path.join(os.getcwd(), "data", "chat_history")
+            HistoryStorage._ensure_dir(HistoryStorage.base_storage_path)
+            logger.info(f"消息存储路径初始化: {HistoryStorage.base_storage_path}")
+            
         chat_type = "private" if is_private_chat else "group"
-        directory = f"{base_dir}/{platform_name}/{chat_type}"
+        directory = os.path.join(HistoryStorage.base_storage_path, platform_name, chat_type)
         
         HistoryStorage._ensure_dir(directory)
-        return f"{directory}/{chat_id}.pkl"
+        return os.path.join(directory, f"{chat_id}.pkl")
     
     @staticmethod
     def save_message(message: AstrBotMessage) -> bool:
@@ -67,6 +78,9 @@ class HistoryStorage:
             # 限制历史记录数量
             if len(history) > 200:
                 history = history[-200:]
+            
+            # 确保父目录存在
+            os.makedirs(os.path.dirname(file_path), exist_ok=True)
                 
             with open(file_path, "wb") as f:
                 pickle.dump(history, f)

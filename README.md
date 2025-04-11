@@ -4,7 +4,7 @@
 
 ![SpectreCore](https://avatars.githubusercontent.com/u/129108081?s=48&v=4)
 
-[![version](https://img.shields.io/badge/version-v2.0.0-blue.svg?style=flat-square)](https://github.com/23q3/astrbot_plugin_SpectreCore)
+[![version](https://img.shields.io/badge/version-v2.0.1-blue.svg?style=flat-square)](https://github.com/23q3/astrbot_plugin_SpectreCore)
 [![license](https://img.shields.io/badge/license-AGPL--3.0-green.svg?style=flat-square)](LICENSE)
 [![author](https://img.shields.io/badge/author-23q3-orange.svg?style=flat-square)](https://github.com/23q3)
 
@@ -66,10 +66,8 @@ SpectreCore (影芯) 是一个为 AstrBot 设计的高级群聊互动插件，�
 
 ## 📋 最新版本
 
-### v2.0.0 (2025-04-08)
-- 🏗️ 完全重构 抛弃使用协议端API获取聊天记录的方式，改为基于Astrbot本身，支持了更多消息平台 [#21](https://github.com/23q3/astrbot_plugin_SpectreCore/issues/21) [#4](https://github.com/23q3/astrbot_plugin_SpectreCore/issues/4)
-- 🔄 架构改进 采用高度模块化设计，每个功能封装在独立工具类中
-- 📸 图片转述 支持图片转述功能 [#16](https://github.com/23q3/astrbot_plugin_SpectreCore/issues/16)
+### v2.0.1 (2025-04-15)
+- 🐛 **修复Docker部署问题** - 改进路径处理方式，修复在Docker环境下无法保存/读取消息历史的问题
 
 查看完整的[更新日志](./CHANGELOG.md)，了解项目的版本历史和功能变化。
 
