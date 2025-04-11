@@ -6,7 +6,7 @@ from .utils import *
     "spectrecore",
     "23q3", 
     "使大模型更好的主动回复群聊中的消息，带来生动和沉浸的群聊对话体验",
-    "2.0.0",
+    "2.0.1",
     "https://github.com/23q3/astrbot_plugin_SpectreCore"
 )
 class SpectreCore(Star):
@@ -17,7 +17,7 @@ class SpectreCore(Star):
         super().__init__(context)
         self.config = config
         # 初始化各个工具类
-        HistoryStorage.init_config(config)
+        HistoryStorage.init(config)
         ImageCaptionUtils.init(context, config)
 
     @event_message_type(EventMessageType.GROUP_MESSAGE)
