@@ -24,7 +24,7 @@ class HistoryStorage:
         # 初始化基础存储路径
         HistoryStorage.base_storage_path = os.path.join(os.getcwd(), "data", "chat_history")
         HistoryStorage._ensure_dir(HistoryStorage.base_storage_path)
-        logger.debug(f"消息存储路径初始化: {HistoryStorage.base_storage_path}")
+        logger.info(f"消息存储路径初始化: {HistoryStorage.base_storage_path}")
     
     @staticmethod
     def _ensure_dir(directory: str) -> None:
