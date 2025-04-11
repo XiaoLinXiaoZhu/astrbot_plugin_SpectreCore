@@ -61,9 +61,16 @@ class HistoryStorage:
         try:
             # 判断是群聊还是私聊
             is_private_chat = not bool(message.group_id)
-            chat_id = message.sender.user_id if is_private_chat else message.group_id
             platform_name = message.platform_name if hasattr(message, "platform_name") else "unknown"
             
+            if is_private_chat:
+                if message.private_id:
+                    chat_id = message.private_id
+                else:
+                    chat_id = message.sender.user_id
+            else:
+                chat_id = message.group_id
+                
             # 获取存储路径
             file_path = HistoryStorage._get_storage_path(platform_name, is_private_chat, chat_id)
             
@@ -165,6 +172,9 @@ class HistoryStorage:
         
         # 设置发送者信息        
         msg.sender = MessageMember(user_id=event.get_self_id(), nickname="AstrBot")
+
+        # 设置对方的id
+        msg.private_id = event.get_sender_id()
         
         # 生成纯文本消息
         msg.message_str = ""
