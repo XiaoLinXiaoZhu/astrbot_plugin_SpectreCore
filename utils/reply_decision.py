@@ -80,6 +80,8 @@ class ReplyDecision:
             should_reply = random.random() < probability
             if should_reply:
                 logger.debug(f"概率触发回复，当前概率: {probability}")
+            else:
+                logger.debug(f"概率回复未触发，当前概率: {probability}")
             return should_reply
         
         # 为未来扩展预留接口

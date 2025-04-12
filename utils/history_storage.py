@@ -1,15 +1,16 @@
 import os
-import pickle
+import jsonpickle
 from typing import List
 from astrbot.api.all import *
 import time
+import traceback
 
 class HistoryStorage:
     """
     历史消息存储工具类
     
     按照平台->聊天类型->ID的层级结构存储消息
-    使用pickle序列化AstrBotMessage对象
+    使用jsonpickle序列化AstrBotMessage对象为JSON格式
     """
     
     # 保存配置对象的静态变量
@@ -24,7 +25,11 @@ class HistoryStorage:
         # 初始化基础存储路径
         HistoryStorage.base_storage_path = os.path.join(os.getcwd(), "data", "chat_history")
         HistoryStorage._ensure_dir(HistoryStorage.base_storage_path)
-        logger.debug(f"消息存储路径初始化: {HistoryStorage.base_storage_path}")
+        logger.info(f"消息存储路径初始化: {HistoryStorage.base_storage_path}")
+        
+        # 配置jsonpickle
+        jsonpickle.set_encoder_options('json', ensure_ascii=False, indent=2)
+        jsonpickle.set_preferred_backend('json')
     
     @staticmethod
     def _ensure_dir(directory: str) -> None:
@@ -45,7 +50,29 @@ class HistoryStorage:
         directory = os.path.join(HistoryStorage.base_storage_path, platform_name, chat_type)
         
         HistoryStorage._ensure_dir(directory)
-        return os.path.join(directory, f"{chat_id}.pkl")
+        return os.path.join(directory, f"{chat_id}.json")
+    
+    @staticmethod
+    def _sanitize_message(message: AstrBotMessage) -> AstrBotMessage:
+        """
+        清理消息对象，移除可能导致序列化失败的属性
+        
+        Args:
+            message: AstrBot消息对象
+            
+        Returns:
+            清理后的消息对象
+        """
+        # 创建消息的浅复制以避免修改原始对象
+        import copy
+        sanitized_message = copy.copy(message)
+        
+        # 移除可能导致序列化问题的属性
+        for attr in ['_client', '_callback', '_handler', '_context', 'raw_message']:
+            if hasattr(sanitized_message, attr):
+                setattr(sanitized_message, attr, None)
+        
+        return sanitized_message
     
     @staticmethod
     def save_message(message: AstrBotMessage) -> bool:
@@ -61,9 +88,16 @@ class HistoryStorage:
         try:
             # 判断是群聊还是私聊
             is_private_chat = not bool(message.group_id)
-            chat_id = message.sender.user_id if is_private_chat else message.group_id
             platform_name = message.platform_name if hasattr(message, "platform_name") else "unknown"
             
+            if is_private_chat:
+                if hasattr(message, "private_id") and message.private_id:
+                    chat_id = message.private_id
+                else:
+                    chat_id = message.sender.user_id
+            else:
+                chat_id = message.group_id
+                
             # 获取存储路径
             file_path = HistoryStorage._get_storage_path(platform_name, is_private_chat, chat_id)
             
@@ -72,8 +106,9 @@ class HistoryStorage:
             if not history:
                 history = []
                 
-            # 添加新消息并保存
-            history.append(message)
+            # 清理消息对象，并添加到历史记录
+            sanitized_message = HistoryStorage._sanitize_message(message)
+            history.append(sanitized_message)
             
             # 限制历史记录数量
             if len(history) > 200:
@@ -81,13 +116,18 @@ class HistoryStorage:
             
             # 确保父目录存在
             os.makedirs(os.path.dirname(file_path), exist_ok=True)
-                
-            with open(file_path, "wb") as f:
-                pickle.dump(history, f)
+            
+            # 使用jsonpickle序列化对象
+            json_data = jsonpickle.encode(history, unpicklable=True)
+            
+            # 写入文件
+            with open(file_path, "w", encoding="utf-8") as f:
+                f.write(json_data)
                 
             return True
         except Exception as e:
             logger.error(f"保存消息历史记录失败: {e}")
+            logger.debug(traceback.format_exc())
             return False
     
     @staticmethod
@@ -132,10 +172,13 @@ class HistoryStorage:
         message_obj.platform_name = event.get_platform_name()
                 
         # 保存消息
-        HistoryStorage.save_message(message_obj)
+        success = HistoryStorage.save_message(message_obj)
         
         chat_type = "私聊" if event.is_private_chat() else "群聊"
-        logger.debug(f"已保存{chat_type}消息到历史记录")
+        if success:
+            logger.debug(f"已保存{chat_type}消息到历史记录")
+        else:
+            logger.error(f"保存{chat_type}消息失败")
     
     @staticmethod
     def create_bot_message(chain: List[BaseMessageComponent], event: AstrMessageEvent) -> AstrBotMessage:
@@ -165,6 +208,9 @@ class HistoryStorage:
         
         # 设置发送者信息        
         msg.sender = MessageMember(user_id=event.get_self_id(), nickname="AstrBot")
+
+        # 设置对方的id
+        msg.private_id = event.get_sender_id()
         
         # 生成纯文本消息
         msg.message_str = ""
@@ -224,13 +270,15 @@ class HistoryStorage:
             
             if not os.path.exists(file_path):
                 return []
-                
-            with open(file_path, "rb") as f:
-                history = pickle.load(f)
+            
+            with open(file_path, "r", encoding="utf-8") as f:
+                # 使用jsonpickle反序列化JSON数据
+                history = jsonpickle.decode(f.read())
                 
             return history
         except Exception as e:
             logger.error(f"读取消息历史记录失败: {e}")
+            logger.debug(traceback.format_exc())
             return []
     
     @staticmethod
