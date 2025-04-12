@@ -68,7 +68,7 @@ SpectreCore (影芯) 是一个为 AstrBot 设计的高级群聊互动插件，�
 
 ### v2.1.0 (2025-04-12)
 - 🔄 **数据存储格式优化** - 使用jsonpickle库替换pickle，提高数据可读性和跨平台兼容性
-- 🐛 **修复Docker环境兼容性** - 采用JSON序列化格式，彻底解决Docker环境下消息历史存取问题 [#15](https://github.com/23q3/astrbot_plugin_SpectreCore/issues/15)
+- 🐛 **修复Docker环境兼容性** - 采用JSON序列化格式，彻底解决Docker环境下消息历史存取问题 [#31](https://github.com/23q3/astrbot_plugin_SpectreCore/issues/31)
 - 🐛 **修复私聊时无法正确保存bot消息的问题** - 修复了在私聊场景下bot发送的消息无法被正确保存到历史记录的问题，确保私聊对话的完整性
 
 查看完整的[更新日志](./CHANGELOG.md)，了解项目的版本历史和功能变化。
