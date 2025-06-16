@@ -43,7 +43,7 @@ class SpectreCore(Star):
     async def _process_message(self, event: AstrMessageEvent):
         """处理消息的通用逻辑：保存历史记录并尝试回复"""
         # 保存用户消息到历史记录
-        HistoryStorage.process_and_save_user_message(event)
+        await HistoryStorage.process_and_save_user_message(event)
         
         # 尝试自动回复
         if ReplyDecision.should_reply(event, self.config):
@@ -61,7 +61,7 @@ class SpectreCore(Star):
                 if "已成功重置" in message_text and "的历史记录喵~" in message_text:
                     return
                 
-                HistoryStorage.save_bot_message_from_chain(event._result.chain, event)
+                await HistoryStorage.save_bot_message_from_chain(event._result.chain, event)
                 logger.debug(f"已保存bot回复消息到历史记录")
                 
         except Exception as e:

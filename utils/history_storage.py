@@ -75,7 +75,7 @@ class HistoryStorage:
         return sanitized_message
     
     @staticmethod
-    def save_message(message: AstrBotMessage) -> bool:
+    async def save_message(message: AstrBotMessage) -> bool:
         """
         保存消息到历史记录
         
@@ -106,24 +106,35 @@ class HistoryStorage:
             if not history:
                 history = []
                 
+            # 处理图片持久化存储
+            await HistoryStorage._process_image_persistence(message)
+
             # 清理消息对象，并添加到历史记录
             sanitized_message = HistoryStorage._sanitize_message(message)
             history.append(sanitized_message)
-            
+
             # 限制历史记录数量
             if len(history) > 200:
                 history = history[-200:]
-            
+
             # 确保父目录存在
             os.makedirs(os.path.dirname(file_path), exist_ok=True)
-            
+
             # 使用jsonpickle序列化对象
             json_data = jsonpickle.encode(history, unpicklable=True)
-            
+
             # 写入文件
             with open(file_path, "w", encoding="utf-8") as f:
                 f.write(json_data)
-                
+
+            # 随机执行清理操作（避免每次都执行，减少性能影响）
+            import random
+            if random.random() < 0.05:  # 5% 的概率执行清理
+                try:
+                    HistoryStorage._cleanup_old_images()
+                except Exception as e:
+                    logger.error(f"执行图片清理时发生错误: {e}")
+
             return True
         except Exception as e:
             logger.error(f"保存消息历史记录失败: {e}")
@@ -153,7 +164,7 @@ class HistoryStorage:
             return group_id in HistoryStorage.config.get("enabled_groups", [])
     
     @staticmethod
-    def process_and_save_user_message(event: AstrMessageEvent) -> None:
+    async def process_and_save_user_message(event: AstrMessageEvent) -> None:
         """
         处理用户消息并保存到历史记录
         
@@ -172,7 +183,7 @@ class HistoryStorage:
         message_obj.platform_name = event.get_platform_name()
                 
         # 保存消息
-        success = HistoryStorage.save_message(message_obj)
+        success = await HistoryStorage.save_message(message_obj)
         
         chat_type = "私聊" if event.is_private_chat() else "群聊"
         if success:
@@ -226,7 +237,7 @@ class HistoryStorage:
         return msg
     
     @staticmethod
-    def save_bot_message_from_chain(chain: List[BaseMessageComponent], event: AstrMessageEvent) -> bool:
+    async def save_bot_message_from_chain(chain: List[BaseMessageComponent], event: AstrMessageEvent) -> bool:
         """
         从消息链和事件对象创建并保存机器人消息
         
@@ -247,7 +258,7 @@ class HistoryStorage:
             bot_msg = HistoryStorage.create_bot_message(chain, event)
             
             # 保存消息
-            return HistoryStorage.save_message(bot_msg)
+            return await HistoryStorage.save_message(bot_msg)
         except Exception as e:
             logger.error(f"保存机器人消息失败: {e}")
             return False
@@ -303,4 +314,140 @@ class HistoryStorage:
             return True
         except Exception as e:
             logger.error(f"清空消息历史记录失败: {e}")
-            return False 
+            return False
+
+    @staticmethod
+    async def _process_image_persistence(message: AstrBotMessage) -> None:
+        """
+        处理消息中的图片持久化存储
+
+        将图片保存为文件并在 file 字段中存储相对路径
+
+        Args:
+            message: AstrBot消息对象
+        """
+        try:
+            # 检查是否启用图片持久化存储
+            if not HistoryStorage.config:
+                logger.debug("配置未初始化，跳过图片持久化处理")
+                return
+
+            image_processing_config = HistoryStorage.config.get("image_processing", {})
+            if not image_processing_config.get("enable_image_persistence", True):
+                logger.debug("图片持久化存储已禁用，跳过处理")
+                return
+
+            if not hasattr(message, 'message') or not message.message:
+                return
+
+            # 确保图片存储目录存在（使用 AstrBot 的数据路径，兼容 Docker）
+            from astrbot.core.utils.astrbot_path import get_astrbot_data_path
+            astrbot_data_path = get_astrbot_data_path()
+            images_dir = os.path.join(astrbot_data_path, "chat_history", "images")
+            HistoryStorage._ensure_dir(images_dir)
+
+            for component in message.message:
+                if isinstance(component, Image):
+                    # 检查是否已经是持久化路径（file:/// 开头且指向 images 目录）
+                    if component.file and component.file.startswith("file:///") and "/images/" in component.file:
+                        logger.debug("图片已经是持久化路径，跳过处理")
+                        continue
+
+                    # 尝试将图片保存为持久化文件
+                    try:
+                        # 获取图片的本地文件路径
+                        temp_file_path = await component.convert_to_file_path()
+                        logger.debug(f"获取的绝对路径:{temp_file_path}")
+
+                        if temp_file_path and os.path.exists(temp_file_path):
+                            # 生成唯一的文件名
+                            import uuid
+                            unique_id = uuid.uuid4().hex
+                            file_extension = ".jpg"  # 默认使用 jpg 扩展名
+
+                            # 尝试从原文件获取扩展名
+                            if "." in temp_file_path:
+                                original_ext = os.path.splitext(temp_file_path)[1].lower()
+                                if original_ext in ['.jpg', '.jpeg', '.png', '.gif', '.bmp', '.webp']:
+                                    file_extension = original_ext
+
+                            # 构建持久化文件路径
+                            persistent_filename = f"{unique_id}{file_extension}"
+                            persistent_file_path = os.path.join(images_dir, persistent_filename)
+
+                            # 复制文件到持久化目录
+                            import shutil
+                            shutil.copy2(temp_file_path, persistent_file_path)
+
+                            # 规范化路径（兼容 Docker 环境）
+                            persistent_file_path = os.path.abspath(persistent_file_path)
+
+                            # 存储绝对路径到 file 字段（使用 file:/// 前缀，兼容 AstrBot）
+                            component.file = f"file:///{persistent_file_path}"
+
+                            logger.debug(f"成功将图片保存为持久化文件: {persistent_file_path}")
+                        else:
+                            logger.warning("无法获取图片的本地文件路径")
+                    except Exception as e:
+                        logger.error(f"保存图片为持久化文件时发生错误: {e}")
+                        # 转换失败时保持原有数据不变
+                        continue
+
+        except Exception as e:
+            logger.error(f"处理图片持久化存储时发生错误: {e}")
+            logger.debug(traceback.format_exc())
+
+    @staticmethod
+    def _cleanup_old_images() -> None:
+        """
+        清理超过配置天数的图片文件
+
+        防止图片文件无限增长
+        """
+        try:
+            # 检查是否启用图片持久化存储
+            if not HistoryStorage.config:
+                logger.debug("配置未初始化，跳过图片清理")
+                return
+
+            image_processing_config = HistoryStorage.config.get("image_processing", {})
+            if not image_processing_config.get("enable_image_persistence", True):
+                logger.debug("图片持久化存储已禁用，跳过清理")
+                return
+
+            # 获取配置的保留天数
+            retention_days = image_processing_config.get("image_retention_days", 7)
+            if retention_days < 1 or retention_days > 365:
+                logger.warning(f"图片保留天数配置无效: {retention_days}，使用默认值7天")
+                retention_days = 7
+
+            # 使用 AstrBot 的数据路径（兼容 Docker）
+            from astrbot.core.utils.astrbot_path import get_astrbot_data_path
+            astrbot_data_path = get_astrbot_data_path()
+            images_dir = os.path.join(astrbot_data_path, "chat_history", "images")
+            if not os.path.exists(images_dir):
+                return
+
+            current_time = time.time()
+            cleanup_threshold = retention_days * 24 * 3600  # 配置的天数转换为秒
+            cleaned_count = 0
+
+            for filename in os.listdir(images_dir):
+                file_path = os.path.join(images_dir, filename)
+                if os.path.isfile(file_path):
+                    # 检查文件创建时间
+                    file_ctime = os.path.getctime(file_path)
+                    if current_time - file_ctime > cleanup_threshold:
+                        try:
+                            os.remove(file_path)
+                            cleaned_count += 1
+                            logger.debug(f"清理过期图片文件: {filename}")
+                        except Exception as e:
+                            logger.error(f"删除过期图片文件失败 {filename}: {e}")
+
+            if cleaned_count > 0:
+                logger.info(f"图片清理完成，清理了 {cleaned_count} 个超过 {retention_days} 天的图片文件")
+
+        except Exception as e:
+            logger.error(f"清理图片文件时发生错误: {e}")
+

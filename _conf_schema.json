@@ -105,6 +105,18 @@
                 "description": "图像转述提示词",
                 "hint": "用于描述图像转述的提示词，根据你的token预算来调整",
                 "default": "请直接简短描述这张图片"
+            },
+            "enable_image_persistence": {
+                "type": "bool",
+                "description": "是否开启图片持久化存储",
+                "hint": "开启后会将聊天中的图片保存到本地，用于解决图片过期的问题",
+                "default": true
+            },
+            "image_retention_days": {
+                "type": "int",
+                "description": "持久化存储的图片保留天数",
+                "hint": "超过此天数的图片将被自动清理",
+                "default": 7
             }
         }
     }
