@@ -75,11 +75,35 @@ class SpectreCore(Star):
         try:
             if resp.role != "assistant":
                 return
+            # 只进行文本过滤，不处理读空气逻辑
             resp.completion_text = TextFilter.process_model_text(resp.completion_text, self.config)
-            if resp.completion_text == "<NO_RESPONSE>":
-                event.stop_event()
         except Exception as e:
             logger.error(f"处理大模型回复时发生错误: {e}")
+
+    @filter.on_decorating_result()
+    async def on_decorating_result(self, event: AstrMessageEvent):
+        """在消息发送前处理读空气功能喵"""
+        try:
+            result = event.get_result()
+            if result is None or not result.chain:
+                return
+
+            # 检查是否为LLM结果且包含<NO_RESPONSE>标记
+            if result.is_llm_result():
+                # 获取消息文本内容
+                message_text = ""
+                for comp in result.chain:
+                    if hasattr(comp, 'text'):
+                        message_text += comp.text
+
+                # 如果包含<NO_RESPONSE>标记，清空事件结果以阻止消息发送
+                if "<NO_RESPONSE>" in message_text:
+                    logger.debug(f"检测到读空气标记，阻止消息发送。事件结果: {event.get_result()}")
+                    event.clear_result()
+                    logger.debug(f"已清空事件结果: {event.get_result()}")
+
+        except Exception as e:
+            logger.error(f"处理消息发送前事件时发生错误: {e}")
 
     @filter.command_group("spectrecore",alias={'sc'})
     def spectrecore(self):
