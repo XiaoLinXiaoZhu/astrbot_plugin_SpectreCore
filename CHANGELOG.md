@@ -1,5 +1,9 @@
 # 📋 更新日志
 
+### v2.1.3 (2025-06-17)
+- ✨ **新增图片持久化存储功能** - 添加图片本地存储和自动清理机制，解决聊天记录中图片链接过期问题。新增 `enable_image_persistence` 和 `image_retention_days` 配置选项 [#52](https://github.com/23q3/astrbot_plugin_SpectreCore/issues/52)
+- 🐛 **修复读空气功能干扰命令执行的问题** - 将读空气处理逻辑从on_llm_response移至on_decorating_result阶段，避免在大模型回复后立即停止事件传播导致命令逻辑被中断 [#33](https://github.com/23q3/astrbot_plugin_SpectreCore/issues/33)
+
 ### v2.1.2 (2025-06-02)
 - 🐛 **修复Reply消息处理错误** - 修复在处理包含回复消息的历史记录时出现'Reply' object has no attribute 'sender_str'错误的问题 [#46](https://github.com/23q3/astrbot_plugin_SpectreCore/issues/46)
 

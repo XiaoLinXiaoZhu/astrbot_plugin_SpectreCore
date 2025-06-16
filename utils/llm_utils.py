@@ -206,11 +206,8 @@ class LLMUtils:
                             # 判断是否为图片组件
                             if isinstance(component, Image):
                                 try:
-                                    # 使用Image类的方法正确获取图片URL
-                                    # 对于不同来源的图片，不同处理方式
-                                    if component.url:
-                                        image_url = component.url
-                                    elif component.file:
+                                    # 只使用本地路径格式
+                                    if component.file:
                                         image_url = component.file
                                     else:
                                         continue  # 跳过其他格式

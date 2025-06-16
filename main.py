@@ -4,9 +4,9 @@ from .utils import *
 
 @register(
     "spectrecore",
-    "23q3", 
+    "23q3",
     "使大模型更好的主动回复群聊中的消息，带来生动和沉浸的群聊对话体验",
-    "2.1.2",
+    "2.1.3",
     "https://github.com/23q3/astrbot_plugin_SpectreCore"
 )
 class SpectreCore(Star):
@@ -43,7 +43,7 @@ class SpectreCore(Star):
     async def _process_message(self, event: AstrMessageEvent):
         """处理消息的通用逻辑：保存历史记录并尝试回复"""
         # 保存用户消息到历史记录
-        HistoryStorage.process_and_save_user_message(event)
+        await HistoryStorage.process_and_save_user_message(event)
         
         # 尝试自动回复
         if ReplyDecision.should_reply(event, self.config):
@@ -61,7 +61,7 @@ class SpectreCore(Star):
                 if "已成功重置" in message_text and "的历史记录喵~" in message_text:
                     return
                 
-                HistoryStorage.save_bot_message_from_chain(event._result.chain, event)
+                await HistoryStorage.save_bot_message_from_chain(event._result.chain, event)
                 logger.debug(f"已保存bot回复消息到历史记录")
                 
         except Exception as e:
@@ -75,11 +75,35 @@ class SpectreCore(Star):
         try:
             if resp.role != "assistant":
                 return
+            # 只进行文本过滤，不处理读空气逻辑
             resp.completion_text = TextFilter.process_model_text(resp.completion_text, self.config)
-            if resp.completion_text == "<NO_RESPONSE>":
-                event.stop_event()
         except Exception as e:
             logger.error(f"处理大模型回复时发生错误: {e}")
+
+    @filter.on_decorating_result()
+    async def on_decorating_result(self, event: AstrMessageEvent):
+        """在消息发送前处理读空气功能喵"""
+        try:
+            result = event.get_result()
+            if result is None or not result.chain:
+                return
+
+            # 检查是否为LLM结果且包含<NO_RESPONSE>标记
+            if result.is_llm_result():
+                # 获取消息文本内容
+                message_text = ""
+                for comp in result.chain:
+                    if hasattr(comp, 'text'):
+                        message_text += comp.text
+
+                # 如果包含<NO_RESPONSE>标记，清空事件结果以阻止消息发送
+                if "<NO_RESPONSE>" in message_text:
+                    logger.debug(f"检测到读空气标记，阻止消息发送。事件结果: {event.get_result()}")
+                    event.clear_result()
+                    logger.debug(f"已清空事件结果: {event.get_result()}")
+
+        except Exception as e:
+            logger.error(f"处理消息发送前事件时发生错误: {e}")
 
     @filter.command_group("spectrecore",alias={'sc'})
     def spectrecore(self):

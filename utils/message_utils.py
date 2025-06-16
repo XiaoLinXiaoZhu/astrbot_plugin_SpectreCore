@@ -89,11 +89,27 @@ class MessageUtils:
                 outline += i.text
             elif isinstance(i, Image):
                 try:
-                    image = i.url
-                    # 异步调用图片转述
-                    caption = await ImageCaptionUtils.generate_image_caption(image)
-                    if caption:
-                        outline += f"[图片: {caption}]"
+                    # 优先使用 file 字段（持久化存储的绝对路径），降级到 url 字段（向后兼容）
+                    image = i.file if i.file else i.url
+                    if image:
+                        # 如果是 file:/// 格式的持久化存储图片，提取绝对路径
+                        if image.startswith("file:///"):
+                            image_path = image[8:]  # 移除 file:/// 前缀
+                            logger.debug(f"使用持久化图片路径: {image_path}")
+
+                            # 检查文件是否存在
+                            if not os.path.exists(image_path):
+                                logger.warning(f"持久化图片文件不存在: {image_path}")
+                                outline += f"[图片: 文件不存在]"
+                                continue
+                            image = image_path
+
+                        # 异步调用图片转述
+                        caption = await ImageCaptionUtils.generate_image_caption(image)
+                        if caption:
+                            outline += f"[图片: {caption}]"
+                        else:
+                            outline += f"[图片]"
                     else:
                         outline += f"[图片]"
                 except Exception as e:
