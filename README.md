@@ -4,7 +4,7 @@
 
 ![SpectreCore](https://avatars.githubusercontent.com/u/129108081?s=48&v=4)
 
-[![version](https://img.shields.io/badge/version-v2.1.3-blue.svg?style=flat-square)](https://github.com/23q3/astrbot_plugin_SpectreCore)
+[![version](https://img.shields.io/badge/version-v2.1.4-blue.svg?style=flat-square)](https://github.com/23q3/astrbot_plugin_SpectreCore)
 [![license](https://img.shields.io/badge/license-AGPL--3.0-green.svg?style=flat-square)](LICENSE)
 [![author](https://img.shields.io/badge/author-23q3-orange.svg?style=flat-square)](https://github.com/23q3)
 
@@ -67,9 +67,9 @@ SpectreCore (影芯) 是一个为 AstrBot 设计的高级群聊互动插件，�
 
 ## 📋 最新版本
 
-### v2.1.3 (2025-06-17)
-- ✨ **新增图片持久化存储功能** - 添加图片本地存储和自动清理机制，解决聊天记录中图片链接过期问题。新增 `enable_image_persistence` 和 `image_retention_days` 配置选项 [#52](https://github.com/23q3/astrbot_plugin_SpectreCore/issues/52)
-- 🐛 **修复读空气功能干扰命令执行的问题** - 将读空气处理逻辑从on_llm_response移至on_decorating_result阶段，避免在大模型回复后立即停止事件传播导致命令逻辑被中断 [#33](https://github.com/23q3/astrbot_plugin_SpectreCore/issues/33)
+### v2.1.4 (2025-06-28)
+- ✨ **为LLM回复添加限制条件** - 在结尾提示词中添加对于回复的限制，避免LLM使用[At:id(昵称)]这样的格式 [#54](https://github.com/23q3/astrbot_plugin_SpectreCore/issues/54)@Fossssss
+- 🐛 **修复与其他插件的兼容性问题** - 移除AiocqhttpMessageEvent类型断言，使用安全检查和异常处理机制，解决其他插件构造输入时的报错问题 [#57](https://github.com/23q3/astrbot_plugin_SpectreCore/issues/57)
 
 查看完整的[更新日志](./CHANGELOG.md)，了解项目的版本历史和功能变化。
 
