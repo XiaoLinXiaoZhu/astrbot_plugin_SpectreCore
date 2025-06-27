@@ -113,14 +113,17 @@ class LLMUtils:
         is_private = event.is_private_chat()
         chat_id = event.get_group_id() if not is_private else event.get_sender_id()
         
-        # 构建基础Prompt 
+        # 构建基础Prompt
         # 对于aiocqhttp平台 通过调用协议端api获取bot用户名
-        if platform_name == "aiocqhttp":
-            from astrbot.core.platform.sources.aiocqhttp.aiocqhttp_message_event import AiocqhttpMessageEvent
-            assert isinstance(event, AiocqhttpMessageEvent)
+        if platform_name == "aiocqhttp" and hasattr(event, "bot"):
+            # 我们不再需要断言，因为 hasattr 已经做了安全的检查
             client = event.bot
-            bot_name = (await client.api.get_login_info())["nickname"]
-            prompt = f"你正在浏览聊天软件，你在聊天软件上的id是{event.get_self_id()}，用户名是{bot_name}，你正在"
+            try:
+                bot_name = (await client.api.get_login_info())["nickname"]
+                prompt = f"你正在浏览聊天软件，你在聊天软件上的id是{event.get_self_id()}，用户名是{bot_name}，你正在"
+            except Exception as e:
+                logger.warning(f"通过 event.bot 获取机器人昵称失败: {e}，将使用通用提示词。")
+                prompt = f"你正在浏览聊天软件，你在聊天软件上的id是{event.get_self_id()}，你正在"
         else:
             prompt = f"你正在浏览聊天软件，你在聊天软件上的id是{event.get_self_id()}，你正在"
 
