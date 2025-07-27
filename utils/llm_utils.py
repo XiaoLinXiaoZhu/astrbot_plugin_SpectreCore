@@ -146,6 +146,7 @@ class LLMUtils:
         prompt = ""
 
         # contexts
+        logger.debug(f"准备调用大模型，平台: {platform_name}, 私聊: {is_private}, 聊天ID: {chat_id}")
 
         return event.request_llm(
             prompt=prompt,
